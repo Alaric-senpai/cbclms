@@ -13,3 +13,1129 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum SchoolType {
+  PUBLIC
+  PRIVATE
+  MISSION
+  OTHER
+}
+
+enum LevelEnum {
+  PRE_PRIMARY
+  PRIMARY
+  JUNIOR_SECONDARY
+  SENIOR_SECONDARY
+  MIXED
+}
+
+enum RoleName {
+  SYSTEM_ADMIN
+  SCHOOL_ADMIN
+  TEACHER
+  PARENT
+  LEARNER
+  GUEST
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  TRANSFERRED
+  ALUMNI
+  SUSPENDED
+}
+
+enum TaskType {
+  PROJECT
+  WRITTEN_TEST
+  ORAL
+  PRACTICAL
+  GROUP_WORK
+  OBSERVATION
+}
+
+enum ProficiencyLevel {
+  EMERGING
+  APPROACHING
+  PROFICIENT
+  EXCEEDING
+}
+
+enum AssessmentSource {
+  SCHOOL_CBA
+  KNEC_SUMMATIVE
+}
+
+enum DeviceType {
+  DESKTOP
+  LAPTOP
+  TABLET
+  SMARTPHONE
+  SERVER
+}
+
+enum DeviceStatus {
+  IN_SERVICE
+  OUT_OF_SERVICE
+  STOLEN
+}
+
+enum ResourceType {
+  PDF
+  VIDEO
+  LINK
+  IMAGE
+  SCORM
+}
+
+enum QuestionType {
+  MCQ
+  SHORT_ANSWER
+  LONG_ANSWER
+  PRACTICAL
+  TRUE_FALSE
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  IN_APP
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum JobType {
+  CSV_IMPORT
+  CSV_EXPORT
+  KNEC_UPLOAD
+  KNEC_DOWNLOAD
+}
+
+enum ApiClientStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum SyncStatus {
+  NEW
+  SYNCED
+  FAILED
+}
+
+enum PermissionName {
+  CAN_EDIT_ASSESSMENTS
+  CAN_VIEW_LEARNERS
+  CAN_EXPORT_CSV
+  CAN_MANAGE_USERS
+}
+
+enum PaymentMethod {
+  MPESA
+  CARD
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model GeographyCounty {
+  id          String               @id @default(uuid()) @db.Uuid
+  code        String?              @unique
+  name        String
+  subcounties GeographySubcounty[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime?
+  deletedAt   DateTime?
+  School      School[]
+}
+
+model GeographySubcounty {
+  id        String          @id @default(uuid()) @db.Uuid
+  countyId  String          @db.Uuid
+  county    GeographyCounty @relation(fields: [countyId], references: [id])
+  code      String?
+  name      String
+  wards     GeographyWard[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime?
+  deletedAt DateTime?
+  School    School[]
+}
+
+model GeographyWard {
+  id          String             @id @default(uuid()) @db.Uuid
+  subcountyId String             @db.Uuid
+  subcounty   GeographySubcounty @relation(fields: [subcountyId], references: [id])
+  name        String
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime?
+  deletedAt   DateTime?
+  School      School[]
+}
+
+model School {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  name                 String
+  schoolCode           String?                @unique
+  ncemisCode           String?
+  type                 SchoolType             @default(PUBLIC)
+  level                LevelEnum
+  countyId             String?                @db.Uuid
+  county               GeographyCounty?       @relation(fields: [countyId], references: [id])
+  subcountyId          String?                @db.Uuid
+  subcounty            GeographySubcounty?    @relation(fields: [subcountyId], references: [id])
+  wardId               String?                @db.Uuid
+  ward                 GeographyWard?         @relation(fields: [wardId], references: [id])
+  address              String?
+  phone                String?
+  email                String?
+  principalId          String?                @db.Uuid
+  principal            User?                  @relation("PrincipalUser", fields: [principalId], references: [id])
+  capacity             Int?
+  infrastructure       Json?
+  timezone             String                 @default("Africa/Nairobi")
+  cohorts              Cohort[]
+  teachers             Teacher[]
+  learners             Learner[]
+  attachments          Attachment[]
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime?
+  deletedAt            DateTime?
+  UserRole             UserRole[]
+  ParentGuardian       ParentGuardian[]
+  SchoolStaffPosition  SchoolStaffPosition[]
+  SubjectOffering      SubjectOffering[]
+  AssessmentTask       AssessmentTask[]
+  TimetableSlot        TimetableSlot[]
+  SchoolInfrastructure SchoolInfrastructure[]
+  Device               Device[]
+  Announcement         Announcement[]
+  AnalyticsSnapshot    AnalyticsSnapshot[]
+  ApiClient            ApiClient[]
+  OfflineSyncQueue     OfflineSyncQueue[]
+  Setting              Setting[]
+  PaymentRecord        PaymentRecord[]
+  User                 User?                  @relation(fields: [userId], references: [id])
+  userId               String?                @db.Uuid
+
+  @@index([schoolCode])
+}
+
+model User {
+  id                  String                @id @default(uuid()) @db.Uuid
+  username            String                @unique
+  email               String                @unique
+  passwordHash        String?
+  firstName           String
+  lastName            String
+  phone               String?
+  dob                 DateTime?
+  gender              String?
+  preferredLang       String?
+  profile             Json?
+  isActive            Boolean               @default(true)
+  lastLogin           DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime?
+  deletedAt           DateTime?
+  userRoles           UserRole[]
+  teacherProfile      Teacher?
+  parentProfile       ParentGuardian?
+  learnerProfile      Learner?
+  attachments         Attachment[]          @relation("UserAttachments")
+  auditLogs           AuditLog[]            @relation("ActorLogs")
+  notifications       Notification[]
+  announcements       Announcement[]        @relation("CreatorAnnouncements")
+  School              School[]
+  UserRole            UserRole[]
+  SchoolStaffPosition SchoolStaffPosition[]
+  ImportJob           ImportJob[]
+  PaymentRecord       PaymentRecord[]
+  School              School[]
+  UserRole            UserRole[]
+}
+
+model Role {
+  id              String           @id @default(uuid()) @db.Uuid
+  name            RoleName         @unique
+  description     String?
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+}
+
+model UserRole {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  roleId     String   @db.Uuid
+  schoolId   String?  @db.Uuid
+  assignedBy String?  @db.Uuid
+  assignedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user           User    @relation(fields: [userId], references: [id])
+  role           Role    @relation(fields: [roleId], references: [id])
+  school         School? @relation(fields: [schoolId], references: [id])
+  assignedByUser User?   @relation("AssignedByUser", fields: [assignedBy], references: [id])
+
+  @@index([userId])
+  @@index([roleId])
+  @@index([schoolId])
+}
+
+model Teacher {
+  id                           String                         @id @default(uuid()) @db.Uuid
+  userId                       String                         @db.Uuid
+  user                         User                           @relation(fields: [userId], references: [id])
+  schoolId                     String?                        @db.Uuid
+  school                       School?                        @relation(fields: [schoolId], references: [id])
+  nemisTeacherCode             String?                        @unique
+  hireDate                     DateTime?
+  qualifications               Json?
+  subjects                     Json?
+  isHeadOfDepartment           Boolean                        @default(false)
+  subjectOfferings             SubjectOffering[]
+  cohortsFormTeacher           Cohort[]                       @relation("FormTeacher")
+  staffPositions               SchoolStaffPosition[]
+  createdAt                    DateTime                       @default(now())
+  updatedAt                    DateTime?
+  deletedAt                    DateTime?
+  Section                      Section[]
+  AssessmentSubmission         AssessmentSubmission[]
+  TimetableSlot                TimetableSlot[]
+  StaffProfessionalDevelopment StaffProfessionalDevelopment[]
+
+  @@index([nemisTeacherCode])
+}
+
+model ParentGuardian {
+  id           String      @id @default(uuid()) @db.Uuid
+  userId       String      @db.Uuid
+  user         User        @relation(fields: [userId], references: [id])
+  relationship String?
+  address      String?
+  occupation   String?
+  schoolId     String?     @db.Uuid
+  school       School?     @relation(fields: [schoolId], references: [id])
+  children     UserChild[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime?
+  deletedAt    DateTime?
+}
+
+model Learner {
+  id                   String                @id @default(uuid()) @db.Uuid
+  userId               String?               @db.Uuid
+  user                 User?                 @relation(fields: [userId], references: [id])
+  upi                  String?               @unique
+  admissionNumber      String?
+  schoolId             String?               @db.Uuid
+  school               School?               @relation(fields: [schoolId], references: [id])
+  currentEnrollmentId  String?               @db.Uuid
+  currentEnrollment    Enrollment?           @relation("CurrentEnrollment", fields: [currentEnrollmentId], references: [id])
+  gender               String?
+  dob                  DateTime?
+  entryDate            DateTime?
+  entryGradeId         String?               @db.Uuid
+  entryGrade           Grade?                @relation("EntryGrade", fields: [entryGradeId], references: [id])
+  specialNeeds         Json?
+  medicalInfo          Json?
+  photoUrl             String?
+  enrollments          Enrollment[]
+  assessmentAggregates AssessmentAggregate[]
+  healthRecords        HealthRecord[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime?
+  deletedAt            DateTime?
+  UserChild            UserChild[]
+  Grade                Grade?                @relation(fields: [gradeId], references: [id])
+  gradeId              String?               @db.Uuid
+
+  @@index([upi])
+}
+
+model UserChild {
+  id           String   @id @default(uuid()) @db.Uuid
+  parentId     String   @db.Uuid
+  learnerId    String   @db.Uuid
+  relationship String?
+  createdAt    DateTime @default(now())
+
+  parent  ParentGuardian @relation(fields: [parentId], references: [id])
+  learner Learner        @relation(fields: [learnerId], references: [id])
+
+  @@index([parentId])
+  @@index([learnerId])
+}
+
+model AcademicYear {
+  id        String    @id @default(uuid()) @db.Uuid
+  year      String
+  startDate DateTime?
+  endDate   DateTime?
+  isActive  Boolean   @default(false)
+  terms     Term[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime?
+  deletedAt DateTime?
+  Cohort    Cohort[]
+}
+
+model Term {
+  id              String           @id @default(uuid()) @db.Uuid
+  academicYearId  String           @db.Uuid
+  name            String
+  startDate       DateTime?
+  endDate         DateTime?
+  academicYear    AcademicYear     @relation(fields: [academicYearId], references: [id])
+  assessmentTasks AssessmentTask[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+
+  @@index([academicYearId])
+}
+
+model Level {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        LevelEnum
+  description String?
+  grades      Grade[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime?
+  deletedAt   DateTime?
+}
+
+model Grade {
+  id                   String            @id @default(uuid()) @db.Uuid
+  levelId              String            @db.Uuid
+  code                 String
+  name                 String
+  order                Int?
+  level                Level             @relation(fields: [levelId], references: [id])
+  cohorts              Cohort[]
+  learningAreaSubjects SubjectOffering[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime?
+  deletedAt            DateTime?
+  Learner              Learner[]
+  Resource             Resource[]
+  Learner              Learner[]
+
+  @@index([levelId])
+}
+
+model Cohort {
+  id                 String               @id @default(uuid()) @db.Uuid
+  schoolId           String               @db.Uuid
+  gradeId            String               @db.Uuid
+  academicYearId     String               @db.Uuid
+  name               String
+  capacity           Int?
+  formTeacherId      String?              @db.Uuid
+  location           String?
+  sections           Section[]
+  enrollments        Enrollment[]
+  timetableSlots     TimetableSlot[]
+  school             School               @relation(fields: [schoolId], references: [id])
+  grade              Grade                @relation(fields: [gradeId], references: [id])
+  academicYear       AcademicYear         @relation(fields: [academicYearId], references: [id])
+  formTeacher        Teacher?             @relation("FormTeacher", fields: [formTeacherId], references: [id])
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime?
+  deletedAt          DateTime?
+  AssignmentInstance AssignmentInstance[]
+
+  @@index([schoolId, gradeId, academicYearId])
+}
+
+model Section {
+  id                String       @id @default(uuid()) @db.Uuid
+  cohortId          String       @db.Uuid
+  name              String
+  teacherInchargeId String?      @db.Uuid
+  cohort            Cohort       @relation(fields: [cohortId], references: [id])
+  teacherIncharge   Teacher?     @relation(fields: [teacherInchargeId], references: [id])
+  enrollments       Enrollment[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime?
+  deletedAt         DateTime?
+
+  @@index([cohortId])
+}
+
+model Enrollment {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  learnerId             String                 @db.Uuid
+  cohortId              String                 @db.Uuid
+  sectionId             String?                @db.Uuid
+  admittedOn            DateTime?
+  leftOn                DateTime?
+  status                EnrollmentStatus       @default(ACTIVE)
+  admissionDocumentIds  Json?
+  assessmentSubmissions AssessmentSubmission[]
+  gradebookEntries      GradebookEntry[]
+  attendanceRecords     AttendanceRecord[]
+  healthRecords         HealthRecord[]
+  learner               Learner                @relation(fields: [learnerId], references: [id])
+  cohort                Cohort                 @relation(fields: [cohortId], references: [id])
+  section               Section?               @relation(fields: [sectionId], references: [id])
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime?
+  deletedAt             DateTime?
+  Learner               Learner[]
+  BehaviorIncident      BehaviorIncident[]
+  AssignmentSubmission  AssignmentSubmission[]
+  QuizSubmission        QuizSubmission[]
+  Learner               Learner[]
+
+  @@unique([learnerId, cohortId])
+  @@index([cohortId])
+}
+
+model SchoolStaffPosition {
+  id        String    @id @default(uuid()) @db.Uuid
+  schoolId  String    @db.Uuid
+  title     String
+  userId    String?   @db.Uuid
+  startDate DateTime?
+  endDate   DateTime?
+  school    School    @relation(fields: [schoolId], references: [id])
+  user      User?     @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime?
+  deletedAt DateTime?
+  Teacher   Teacher?  @relation(fields: [teacherId], references: [id])
+  teacherId String?   @db.Uuid
+
+  @@index([schoolId])
+}
+
+model LearningArea {
+  id               String            @id @default(uuid()) @db.Uuid
+  code             String            @unique
+  name             String
+  description      String?
+  levelScope       Json?
+  strands          Strand[]
+  subjectOfferings SubjectOffering[]
+  resources        Resource[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime?
+  deletedAt        DateTime?
+}
+
+model SubjectOffering {
+  id             String               @id @default(uuid()) @db.Uuid
+  schoolId       String               @db.Uuid
+  learningAreaId String               @db.Uuid
+  gradeId        String?              @db.Uuid
+  isCore         Boolean              @default(false)
+  teacherId      String?              @db.Uuid
+  school         School               @relation(fields: [schoolId], references: [id])
+  learningArea   LearningArea         @relation(fields: [learningAreaId], references: [id])
+  grade          Grade?               @relation(fields: [gradeId], references: [id])
+  teacher        Teacher?             @relation(fields: [teacherId], references: [id])
+  timetableSlots TimetableSlot[]
+  assignments    AssignmentInstance[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime?
+  deletedAt      DateTime?
+  GradebookEntry GradebookEntry[]
+
+  @@index([schoolId, learningAreaId, gradeId])
+}
+
+model Strand {
+  id               String            @id @default(uuid()) @db.Uuid
+  learningAreaId   String            @db.Uuid
+  code             String?
+  name             String
+  description      String?
+  substrands       Substrand[]
+  learningOutcomes LearningOutcome[]
+  learningArea     LearningArea      @relation(fields: [learningAreaId], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime?
+  deletedAt        DateTime?
+}
+
+model Substrand {
+  id               String            @id @default(uuid()) @db.Uuid
+  strandId         String            @db.Uuid
+  code             String?
+  name             String
+  description      String?
+  learningOutcomes LearningOutcome[]
+  strand           Strand            @relation(fields: [strandId], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime?
+  deletedAt        DateTime?
+}
+
+model LearningOutcome {
+  id                  String                      @id @default(uuid()) @db.Uuid
+  substrandId         String                      @db.Uuid
+  code                String?
+  statement           String
+  levelId             String?                     @db.Uuid
+  substrand           Substrand                   @relation(fields: [substrandId], references: [id])
+  outcomeCompetencies LearningOutcomeCompetency[]
+  assessmentTasks     AssessmentTask[]
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime?
+  deletedAt           DateTime?
+  Strand              Strand?                     @relation(fields: [strandId], references: [id])
+  strandId            String?                     @db.Uuid
+}
+
+model Competency {
+  id                   String                      @id @default(uuid()) @db.Uuid
+  code                 String                      @unique
+  name                 String
+  description          String?
+  order                Int?
+  outcomeCompetencies  LearningOutcomeCompetency[]
+  assessmentAggregates AssessmentAggregate[]
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime?
+  deletedAt            DateTime?
+}
+
+model LearningOutcomeCompetency {
+  id                String          @id @default(uuid()) @db.Uuid
+  learningOutcomeId String          @db.Uuid
+  competencyId      String          @db.Uuid
+  weight            Float?
+  learningOutcome   LearningOutcome @relation(fields: [learningOutcomeId], references: [id])
+  competency        Competency      @relation(fields: [competencyId], references: [id])
+
+  @@unique([learningOutcomeId, competencyId])
+}
+
+model AssessmentTask {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  schoolId              String?                @db.Uuid
+  learningOutcomeId     String                 @db.Uuid
+  code                  String?
+  title                 String
+  description           String?
+  taskType              TaskType
+  maxScore              Float?
+  proficiencyRequired   ProficiencyLevel?
+  termId                String?                @db.Uuid
+  weight                Float?
+  resources             Json?
+  createdBy             String?                @db.Uuid
+  learningOutcome       LearningOutcome        @relation(fields: [learningOutcomeId], references: [id])
+  school                School?                @relation(fields: [schoolId], references: [id])
+  term                  Term?                  @relation(fields: [termId], references: [id])
+  assessmentSubmissions AssessmentSubmission[]
+  rubrics               AssessmentRubric[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime?
+  deletedAt             DateTime?
+
+  @@index([schoolId, learningOutcomeId])
+}
+
+model AssessmentSubmission {
+  id             String            @id @default(uuid()) @db.Uuid
+  taskId         String            @db.Uuid
+  enrollmentId   String            @db.Uuid
+  assessorId     String?           @db.Uuid
+  submittedAt    DateTime          @default(now())
+  scoreNumeric   Float?
+  proficiency    ProficiencyLevel?
+  evidenceIds    Json?
+  feedback       String?
+  termId         String?           @db.Uuid
+  academicYearId String?           @db.Uuid
+  source         AssessmentSource  @default(SCHOOL_CBA)
+  task           AssessmentTask    @relation(fields: [taskId], references: [id])
+  enrollment     Enrollment        @relation(fields: [enrollmentId], references: [id])
+  assessor       Teacher?          @relation(fields: [assessorId], references: [id])
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime?
+  deletedAt      DateTime?
+
+  @@unique([taskId, enrollmentId, termId], name: "unique_task_enrollment_term")
+  @@index([enrollmentId])
+}
+
+model AssessmentAggregate {
+  id                String            @id @default(uuid()) @db.Uuid
+  learnerId         String            @db.Uuid
+  competencyId      String            @db.Uuid
+  academicYearId    String?           @db.Uuid
+  termId            String?           @db.Uuid
+  averageScore      Float?
+  latestProficiency ProficiencyLevel?
+  evidenceCount     Int?
+  notes             String?
+  computedAt        DateTime?
+  learner           Learner           @relation(fields: [learnerId], references: [id])
+  competency        Competency        @relation(fields: [competencyId], references: [id])
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime?
+  deletedAt         DateTime?
+
+  @@index([learnerId, competencyId, academicYearId, termId])
+}
+
+model AssessmentRubric {
+  id        String         @id @default(uuid()) @db.Uuid
+  taskId    String         @db.Uuid
+  rubric    Json
+  createdBy String?        @db.Uuid
+  task      AssessmentTask @relation(fields: [taskId], references: [id])
+  createdAt DateTime       @default(now())
+  updatedAt DateTime?
+  deletedAt DateTime?
+}
+
+model Attachment {
+  id          String      @id @default(uuid()) @db.Uuid
+  uploaderId  String?     @db.Uuid
+  schoolId    String?     @db.Uuid
+  path        String
+  url         String?
+  mimeType    String?
+  size        Int?
+  checksum    String?
+  linkedTable String?
+  linkedId    String?
+  isPublic    Boolean     @default(false)
+  uploader    User?       @relation("UserAttachments", fields: [uploaderId], references: [id])
+  school      School?     @relation(fields: [schoolId], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime?
+  deletedAt   DateTime?
+  Resource    Resource[]
+  ImportJob   ImportJob[]
+
+  @@index([schoolId])
+}
+
+model GradebookEntry {
+  id                String            @id @default(uuid()) @db.Uuid
+  enrollmentId      String            @db.Uuid
+  subjectOfferingId String?           @db.Uuid
+  termId            String?           @db.Uuid
+  scoreNumeric      Float?
+  proficiency       ProficiencyLevel?
+  comments          String?
+  enrollment        Enrollment        @relation(fields: [enrollmentId], references: [id])
+  subjectOffering   SubjectOffering?  @relation(fields: [subjectOfferingId], references: [id])
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime?
+  deletedAt         DateTime?
+
+  @@index([enrollmentId])
+}
+
+model TimetableSlot {
+  id                String           @id @default(uuid()) @db.Uuid
+  schoolId          String           @db.Uuid
+  cohortId          String           @db.Uuid
+  dayOfWeek         Int
+  startTime         DateTime
+  endTime           DateTime
+  subjectOfferingId String?          @db.Uuid
+  teacherId         String?          @db.Uuid
+  room              String?
+  school            School           @relation(fields: [schoolId], references: [id])
+  cohort            Cohort           @relation(fields: [cohortId], references: [id])
+  subjectOffering   SubjectOffering? @relation(fields: [subjectOfferingId], references: [id])
+  teacher           Teacher?         @relation(fields: [teacherId], references: [id])
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime?
+  deletedAt         DateTime?
+
+  @@index([schoolId, cohortId])
+}
+
+model AttendanceRecord {
+  id           String     @id @default(uuid()) @db.Uuid
+  enrollmentId String     @db.Uuid
+  date         DateTime
+  status       String
+  markedBy     String?    @db.Uuid
+  notes        String?
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime?
+  deletedAt    DateTime?
+
+  @@index([enrollmentId, date])
+}
+
+model BehaviorIncident {
+  id             String     @id @default(uuid()) @db.Uuid
+  enrollmentId   String     @db.Uuid
+  reportedBy     String?    @db.Uuid
+  incidentDate   DateTime
+  category       String?
+  description    String?
+  actionTaken    String?
+  resolved       Boolean    @default(false)
+  resolutionDate DateTime?
+  enrollment     Enrollment @relation(fields: [enrollmentId], references: [id])
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime?
+  deletedAt      DateTime?
+
+  @@index([enrollmentId])
+}
+
+model HealthRecord {
+  id                String     @id @default(uuid()) @db.Uuid
+  enrollmentId      String     @db.Uuid
+  allergies         String?
+  chronicConditions String?
+  immunizations     Json?
+  medicalNotes      String?
+  lastCheckup       DateTime?
+  enrollment        Enrollment @relation(fields: [enrollmentId], references: [id])
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime?
+  deletedAt         DateTime?
+  Learner           Learner?   @relation(fields: [learnerId], references: [id])
+  learnerId         String?    @db.Uuid
+}
+
+model SchoolInfrastructure {
+  id               String    @id @default(uuid()) @db.Uuid
+  schoolId         String    @db.Uuid
+  labs             Json?
+  workshops        Json?
+  sportsFacilities Json?
+  library          Json?
+  electricity      Boolean   @default(false)
+  internet         Boolean   @default(false)
+  school           School    @relation(fields: [schoolId], references: [id])
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime?
+  deletedAt        DateTime?
+}
+
+model Device {
+  id         String       @id @default(uuid()) @db.Uuid
+  schoolId   String       @db.Uuid
+  deviceType DeviceType
+  model      String?
+  serial     String?
+  assignedTo String?      @db.Uuid
+  status     DeviceStatus @default(IN_SERVICE)
+  school     School       @relation(fields: [schoolId], references: [id])
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime?
+  deletedAt  DateTime?
+
+  @@index([schoolId, serial])
+}
+
+model Resource {
+  id             String        @id @default(uuid()) @db.Uuid
+  schoolId       String?       @db.Uuid
+  title          String
+  description    String?
+  type           ResourceType
+  fileId         String?       @db.Uuid
+  learningAreaId String?       @db.Uuid
+  gradeId        String?       @db.Uuid
+  tags           String[]
+  createdBy      String?       @db.Uuid
+  file           Attachment?   @relation(fields: [fileId], references: [id])
+  learningArea   LearningArea? @relation(fields: [learningAreaId], references: [id])
+  grade          Grade?        @relation(fields: [gradeId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime?
+  deletedAt      DateTime?
+
+  @@index([schoolId])
+}
+
+model AssignmentInstance {
+  id                String                 @id @default(uuid()) @db.Uuid
+  title             String
+  description       String?
+  subjectOfferingId String?                @db.Uuid
+  cohortId          String?                @db.Uuid
+  dueDate           DateTime?
+  maxScore          Float?
+  createdBy         String?                @db.Uuid
+  rubricId          String?                @db.Uuid
+  subjectOffering   SubjectOffering?       @relation(fields: [subjectOfferingId], references: [id])
+  cohort            Cohort?                @relation(fields: [cohortId], references: [id])
+  submissions       AssignmentSubmission[]
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime?
+  deletedAt         DateTime?
+}
+
+model AssignmentSubmission {
+  id           String             @id @default(uuid()) @db.Uuid
+  assignmentId String             @db.Uuid
+  enrollmentId String             @db.Uuid
+  submittedAt  DateTime           @default(now())
+  fileIds      Json?
+  scoreNumeric Float?
+  proficiency  ProficiencyLevel?
+  feedback     String?
+  assignment   AssignmentInstance @relation(fields: [assignmentId], references: [id])
+  enrollment   Enrollment         @relation(fields: [enrollmentId], references: [id])
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime?
+  deletedAt    DateTime?
+
+  @@index([assignmentId, enrollmentId])
+}
+
+model QuestionBank {
+  id             String       @id @default(uuid()) @db.Uuid
+  creatorId      String?      @db.Uuid
+  learningAreaId String?      @db.Uuid
+  gradeId        String?      @db.Uuid
+  questionText   String
+  type           QuestionType
+  options        Json?
+  answer         Json?
+  difficulty     Int?
+  tags           String[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime?
+  deletedAt      DateTime?
+}
+
+model Quiz {
+  id             String           @id @default(uuid()) @db.Uuid
+  title          String
+  cohortId       String?          @db.Uuid
+  learningAreaId String?          @db.Uuid
+  gradeId        String?          @db.Uuid
+  questionIds    Json?
+  maxScore       Float?
+  startAt        DateTime?
+  endAt          DateTime?
+  createdBy      String?          @db.Uuid
+  submissions    QuizSubmission[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime?
+  deletedAt      DateTime?
+}
+
+model QuizSubmission {
+  id           String            @id @default(uuid()) @db.Uuid
+  quizId       String            @db.Uuid
+  enrollmentId String            @db.Uuid
+  answers      Json?
+  scoreNumeric Float?
+  proficiency  ProficiencyLevel?
+  submittedAt  DateTime          @default(now())
+  quiz         Quiz              @relation(fields: [quizId], references: [id])
+  enrollment   Enrollment        @relation(fields: [enrollmentId], references: [id])
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime?
+  deletedAt    DateTime?
+}
+
+model Notification {
+  id             String              @id @default(uuid()) @db.Uuid
+  senderId       String?             @db.Uuid
+  recipientId    String?             @db.Uuid
+  recipientGroup Json?
+  channel        NotificationChannel
+  subject        String?
+  body           String
+  status         String?
+  sentAt         DateTime?
+  sender         User?               @relation(fields: [senderId], references: [id])
+  recipient      User?               @relation(fields: [recipientId], references: [id])
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime?
+}
+
+model Announcement {
+  id          String    @id @default(uuid()) @db.Uuid
+  schoolId    String    @db.Uuid
+  title       String
+  body        String
+  publishDate DateTime?
+  expiresAt   DateTime?
+  createdBy   String?   @db.Uuid
+  school      School    @relation(fields: [schoolId], references: [id])
+  creator     User?     @relation("CreatorAnnouncements", fields: [createdBy], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime?
+  deletedAt   DateTime?
+}
+
+model AnalyticsSnapshot {
+  id             String    @id @default(uuid()) @db.Uuid
+  schoolId       String    @db.Uuid
+  academicYearId String?   @db.Uuid
+  termId         String?   @db.Uuid
+  snapshot       Json
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime?
+  deletedAt      DateTime?
+  school         School    @relation(fields: [schoolId], references: [id])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorId     String?  @db.Uuid
+  action      String
+  targetTable String?
+  targetId    String?
+  payload     Json?
+  createdAt   DateTime @default(now())
+  ipAddress   String?
+  actor       User?    @relation("ActorLogs", fields: [actorId], references: [id])
+
+  @@index([actorId, targetTable])
+}
+
+model ImportJob {
+  id            String      @id @default(uuid()) @db.Uuid
+  jobType       JobType
+  initiatedBy   String?     @db.Uuid
+  schoolId      String?     @db.Uuid
+  fileId        String?     @db.Uuid
+  status        JobStatus   @default(PENDING)
+  errors        Json?
+  createdAt     DateTime    @default(now())
+  completedAt   DateTime?
+  createdByUser User?       @relation(fields: [initiatedBy], references: [id])
+  file          Attachment? @relation(fields: [fileId], references: [id])
+
+  @@index([schoolId, status])
+}
+
+model NemisRegistry {
+  id           String    @id @default(uuid()) @db.Uuid
+  upi          String    @unique
+  learnerId    String?   @db.Uuid
+  nemisPayload Json?
+  lastSynced   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime?
+}
+
+model ApiClient {
+  id         String          @id @default(uuid()) @db.Uuid
+  schoolId   String          @db.Uuid
+  clientName String
+  apiKeyHash String
+  scopes     Json?
+  lastUsed   DateTime?
+  status     ApiClientStatus @default(ACTIVE)
+  school     School          @relation(fields: [schoolId], references: [id])
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime?
+  deletedAt  DateTime?
+
+  @@index([schoolId])
+}
+
+model OfflineSyncQueue {
+  id          String     @id @default(uuid()) @db.Uuid
+  schoolId    String     @db.Uuid
+  payload     Json
+  attempts    Int        @default(0)
+  status      SyncStatus @default(NEW)
+  lastAttempt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime?
+  deletedAt   DateTime?
+  school      School     @relation(fields: [schoolId], references: [id])
+
+  @@index([schoolId, status])
+}
+
+model StaffProfessionalDevelopment {
+  id             String    @id @default(uuid()) @db.Uuid
+  teacherId      String    @db.Uuid
+  courseTitle    String
+  provider       String?
+  startDate      DateTime?
+  endDate        DateTime?
+  certificateUrl String?
+  status         String?
+  teacher        Teacher   @relation(fields: [teacherId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime?
+  deletedAt      DateTime?
+
+  @@index([teacherId])
+}
+
+model Permission {
+  id              String           @id @default(uuid()) @db.Uuid
+  name            PermissionName   @unique
+  description     String?
+  rolePermissions RolePermission[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+}
+
+model RolePermission {
+  id           String     @id @default(uuid()) @db.Uuid
+  roleId       String     @db.Uuid
+  permissionId String     @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  createdAt    DateTime   @default(now())
+}
+
+model Setting {
+  id        String   @id @default(uuid()) @db.Uuid
+  schoolId  String?  @db.Uuid
+  key       String
+  value     Json
+  updatedBy String?  @db.Uuid
+  updatedAt DateTime @default(now())
+  school    School?  @relation(fields: [schoolId], references: [id])
+
+  @@index([schoolId, key])
+}
+
+model PaymentRecord {
+  id        String        @id @default(uuid()) @db.Uuid
+  schoolId  String        @db.Uuid
+  payerId   String?       @db.Uuid
+  amount    Float
+  purpose   String?
+  method    PaymentMethod
+  reference String?
+  status    PaymentStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime?
+  school    School        @relation(fields: [schoolId], references: [id])
+  payer     User?         @relation(fields: [payerId], references: [id])
+
+  @@index([schoolId, status])
+}
+
+model SystemTask {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String
+  payload   Json?
+  schedule  String?
+  lastRun   DateTime?
+  status    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime?
+}
